@@ -9,6 +9,7 @@ from zoneinfo import ZoneInfo
 import requests  # For API requests
 import unicodedata
 import string
+from bs4 import BeautifulSoup
 
 
 def audit_log(message: str):
@@ -86,44 +87,33 @@ class Scrape(commands.Cog):
             await interaction.followup.send(embed=error_embed)
 
     def run_scraper(self):
-        logging.info("Running scraper using Bandsintown API...")
+        logging.info("Running scraper using Holly Humberstone website HTML...")
         audit_log(
-            "Starting scraper: Requesting event data from Bandsintown API for Holly Humberstone."
+            "Starting scraper: Requesting event data from Holly Humberstone website HTML."
         )
         new_entries = []
         try:
-            # API endpoint that returns event data for Holly Humberstone
-            url = (
-                "https://rest.bandsintown.com/V3.1/artists/Holly%20Humberstone/events/"
-                "?app_id=js_www.hollyhumberstone.com"
-            )
+            url = "https://www.hollyhumberstone.com/"
             response = requests.get(url)
-            response.raise_for_status()  # Raise an exception for bad responses
-            events = response.json()
-            logging.info(f"Retrieved {len(events)} events from API.")
-            audit_log(f"Scraped API: Retrieved {len(events)} events.")
+            response.raise_for_status()
+            soup = BeautifulSoup(response.text, "html.parser")
+            rows = soup.select(".tour-content-box table.hh-gigs tbody tr")
+            logging.info(f"Retrieved {len(rows)} events from website HTML.")
+            audit_log(f"Scraped website HTML: Retrieved {len(rows)} events.")
 
-            for event in events:
-                start_date_str = (event.get("starts_at") or "").split("T")[0]
-                end_date_str = (event.get("ends_at") or "").split("T")[0]
+            for row in rows:
+                date_text = row.select_one("td.gig-date")
+                venue_text = row.select_one("td.gig-venue")
+                city_text = row.select_one("td.gig-city")
 
-                formatted_start = (
-                    self.format_api_date(start_date_str) if start_date_str else ""
-                )
-                formatted_date = formatted_start
-                if (
-                    end_date_str
-                    and end_date_str.lower() != "none"
-                    and end_date_str != start_date_str
-                ):
-                    formatted_end = self.format_api_date(end_date_str)
-                    formatted_date = f"{formatted_start} - {formatted_end}"
+                raw_date = date_text.get_text(strip=True) if date_text else ""
+                venue = venue_text.get_text(strip=True) if venue_text else ""
+                location = city_text.get_text(strip=True) if city_text else ""
 
-                venue_info = event.get("venue", {})
-                venue = venue_info.get("name", "")
-                location = venue_info.get("location") or ", ".join(
-                    filter(None, [venue_info.get("city"), venue_info.get("country")])
-                )
+                formatted_date = ""
+                if raw_date:
+                    dt = datetime.strptime(raw_date, "%d/%m/%Y")
+                    formatted_date = dt.strftime("%d %B %Y")
 
                 entry = (formatted_date, venue, location)
                 new_entries.append(entry)
@@ -131,11 +121,11 @@ class Scrape(commands.Cog):
                     f"New entry found: ({normalize_string(formatted_date)}, {normalize_string(venue)}, {normalize_string(location)})"
                 )
             audit_log(
-                f"Finished processing API events. Total new entries: {len(new_entries)}."
+                f"Finished processing website HTML events. Total new entries: {len(new_entries)}."
             )
         except Exception as e:
-            logging.error(f"An error occurred during API scraping: {e}")
-            audit_log(f"Error during API scraping: {e}")
+            logging.error(f"An error occurred during website scraping: {e}")
+            audit_log(f"Error during website scraping: {e}")
         return new_entries
 
     def format_api_date(self, iso_date_str):
