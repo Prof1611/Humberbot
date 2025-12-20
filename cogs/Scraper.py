@@ -98,6 +98,8 @@ class Scrape(commands.Cog):
             response.raise_for_status()
             soup = BeautifulSoup(response.text, "html.parser")
             rows = soup.select(".tour-content-box table.hh-gigs tbody tr")
+            if not rows:
+                rows = soup.select(".tour-content-box table.hh-gigs tr")
             logging.info(f"Retrieved {len(rows)} events from website HTML.")
             audit_log(f"Scraped website HTML: Retrieved {len(rows)} events.")
 
