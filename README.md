@@ -1,6 +1,6 @@
-# Holly Humberbot Discord Bot
+# Humberbot Discord Bot
 
-Holly Humberbot keeps the official Holly Humberstone Discord server running smoothly with welcome posts, live show updates, giveaways, and music-friendly utilities like Songlink lookups. Use this repository to configure and run the bot for the artist’s community.
+Humberbot keeps the official Holly Humberstone Discord server running smoothly with welcome posts, live show updates, giveaways, and music-friendly utilities like Songlink lookups. Use this repository to configure and run the bot for the artist’s community.
 
 ## Getting started
 

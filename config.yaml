@@ -1,7 +1,7 @@
 # =============================================================
-# HollyHumberstoneHQ Configuration
+# Humberbot Configuration
 # -------------------------------------------------------------
-# Comments describe how the bot uses each value inside HollyHumberstoneHQ.
+# Comments describe how the bot uses each value inside Humberbot.
 # =============================================================
 
 bot:
@@ -28,7 +28,7 @@ bot:
     - "Kissing In Swimming Pools"
     - "Hive"
 
-  # Channel that receives forwarded direct messages sent to HollyHumberstoneHQ.
+  # Channel that receives forwarded direct messages sent to Humberbot.
   # Set to null to disable DM forwarding entirely.
   dm_forward_channel_id: 1031973393886617670
 
