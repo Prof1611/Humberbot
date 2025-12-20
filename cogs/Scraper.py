@@ -44,7 +44,7 @@ class Scrape(commands.Cog):
 
     @discord.app_commands.command(
         name="scrape",
-        description="Checks the band's website for new shows and updates #gig-chats and server events.",
+        description="Checks Holly Humberstone's website for new shows and updates #concert-chats and server events.",
     )
     async def scrape(self, interaction: discord.Interaction):
         await interaction.response.defer()
