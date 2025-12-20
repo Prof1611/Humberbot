@@ -1,41 +1,34 @@
 # =============================================================
-# KingfishrHQ Configuration
+# HollyHumberstoneHQ Configuration
 # -------------------------------------------------------------
-# Comments describe how the bot uses each value inside KingfishrHQ.
+# Comments describe how the bot uses each value inside HollyHumberstoneHQ.
 # =============================================================
 
 bot:
-  # Listening presence lines that promote Kingfishr music and news.
+  # Listening presence lines that promote Holly Humberstone music and news.
   # Leave at least one entry.
   statuses:
-    - "Man On The Moon"
-    - "21"
-    - "Gloria"
-    - "I Cried, I Wept"
-    - "Next To Me"
-    - "Diamonds & Roses"
-    - "Flowers-Fire"
-    - "Caroline (Rework)"
-    - "Killeagh"
-    - "Ways To Change"
-    - "Shadow"
-    - "Blue Skies"
-    - "Shot In The Dark"
-    - "Eyes Don't Lie"
-    - "Someday"
-    - "Schooldays"
-    - "Flowers-Fire (feat. Jamie Duffy)"
-    - "Heart In The Water"
-    - "Anyway"
-    - "Headlands"
-    - "Vancouver"
-    - "Leave"
-    - "Afterglow"
-    - "Go Loud"
-    - "The Saviour"
-    - "Bet On Beauty"
+    - "The Walls Are Way Too Thin"
+    - "Deep End"
+    - "Falling Asleep At The Wheel"
+    - "London Is Lonely"
+    - "Scarlett"
+    - "Sleep Tight"
+    - "Haunted House"
+    - "Can You Afford To Lose Me?"
+    - "Girl"
+    - "The Alley"
+    - "Vanilla"
+    - "Into Your Room"
+    - "Paint My Bedroom Black"
+    - "Lauren"
+    - "Superbloodmoon"
+    - "Ghost Me"
+    - "Antichrist"
+    - "Kissing In Swimming Pools"
+    - "Hive"
 
-  # Channel that receives forwarded direct messages sent to KingfishrHQ.
+  # Channel that receives forwarded direct messages sent to HollyHumberstoneHQ.
   # Set to null to disable DM forwarding entirely.
   dm_forward_channel_id: 1440018549602123970
 
