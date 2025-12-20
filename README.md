@@ -1,6 +1,6 @@
-# Kingfishr HQ Discord Bot
+# Holly Humberstone HQ Discord Bot
 
-Kingfishr HQ keeps the official Kingfishr Discord server running smoothly with welcome posts, live show updates, giveaways, and music-friendly utilities like Songlink lookups. Use this repository to configure and run the bot for the band’s community.
+Holly Humberstone HQ keeps the official Holly Humberstone Discord server running smoothly with welcome posts, live show updates, giveaways, and music-friendly utilities like Songlink lookups. Use this repository to configure and run the bot for the artist’s community.
 
 ## Getting started
 
@@ -11,15 +11,15 @@ Kingfishr HQ keeps the official Kingfishr Discord server running smoothly with w
 2. **Create the Discord application**
    - Set up a bot user in the [Discord Developer Portal](https://discord.com/developers/applications) and enable the privileged intents you need (at minimum Server Members for welcomes and autorole).
    - Add the bot token to your environment or hosting platform as `TOKEN`.
-3. **Invite the bot to the Kingfishr server**
+3. **Invite the bot to the Holly Humberstone server**
    - Use the OAuth2 URL generator to create an invite link with `bot` and `applications.commands` scopes.
    - Choose the permissions your staff team requires (Manage Roles, Manage Events, Moderate Members, etc.) and place the bot role above any roles it should assign.
 
 ## Configure `config.yaml`
 
-Fill in the server IDs and options for the Kingfishr community:
+Fill in the server IDs and options for the Holly Humberstone community:
 
-- **`bot.statuses`** – Rotating presence lines themed around Kingfishr releases, shows, and announcements.
+- **`bot.statuses`** – Rotating presence lines themed around Holly Humberstone releases, shows, and announcements.
 - **`bot.dm_forward_channel_id`** – Channel ID that should receive DMs sent to the bot (set to `null` to disable).
 - **`channels`** – IDs for welcome, moderation log, live show forum, and optional introductions channels.
 - **`features`** – Toggle modules and provide their options:

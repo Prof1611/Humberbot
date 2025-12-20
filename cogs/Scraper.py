@@ -88,14 +88,14 @@ class Scrape(commands.Cog):
     def run_scraper(self):
         logging.info("Running scraper using Bandsintown API...")
         audit_log(
-            "Starting scraper: Requesting event data from Bandsintown API for Kingfishr."
+            "Starting scraper: Requesting event data from Bandsintown API for Holly Humberstone."
         )
         new_entries = []
         try:
-            # API endpoint that returns event data for Kingfishr
+            # API endpoint that returns event data for Holly Humberstone
             url = (
-                "https://rest.bandsintown.com/V3.1/artists/Kingfishr/events/"
-                "?app_id=js_www.kingfishr.ie"
+                "https://rest.bandsintown.com/V3.1/artists/Holly%20Humberstone/events/"
+                "?app_id=js_www.hollyhumberstone.com"
             )
             response = requests.get(url)
             response.raise_for_status()  # Raise an exception for bad responses
@@ -255,7 +255,7 @@ class Scrape(commands.Cog):
                 )
             if not exists:
                 try:
-                    content = f"Kingfishr at {venue.title()}, {location.title()}"
+                    content = f"Holly Humberstone at {venue.title()}, {location.title()}"
                     logging.info(f"Creating thread for: {thread_title}")
                     await gigchats_channel.create_thread(
                         name=thread_title,
@@ -391,7 +391,7 @@ class Scrape(commands.Cog):
                 try:
                     await guild.create_scheduled_event(
                         name=event_name,
-                        description=f"Kingfishr at {venue.title() if venue else ''}, {location.title() if location else ''}",
+                        description=f"Holly Humberstone at {venue.title() if venue else ''}, {location.title() if location else ''}",
                         start_time=start_time,
                         end_time=end_time,
                         location=f"{venue.title() if venue else ''}, {location.title() if location else ''}",
@@ -467,4 +467,3 @@ class Scrape(commands.Cog):
 
 async def setup(bot):
     await bot.add_cog(Scrape(bot))
-
