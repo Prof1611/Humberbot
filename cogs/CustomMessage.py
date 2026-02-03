@@ -5,6 +5,7 @@ from discord import app_commands, AllowedMentions
 from discord.ext import commands
 import asyncio
 import datetime
+from typing import List, Optional, Sequence
 
 
 def audit_log(message: str):
@@ -21,88 +22,27 @@ def make_embed(title: str, description: str, color: discord.Color) -> discord.Em
     return discord.Embed(title=title, description=description, color=color)
 
 
-# --- Dropdown (Select) and View to choose message format ---
-class MessageFormatSelect(discord.ui.Select):
-    def __init__(self):
-        options = [
-            discord.SelectOption(
-                label="Normal",
-                value="normal",
-                description="Send as a normal text message.",
-            ),
-            discord.SelectOption(
-                label="Embed",
-                value="embed",
-                description="Send as an embed message with colour options.",
-            ),
-        ]
-        super().__init__(
-            placeholder="Choose message format...",
-            min_values=1,
-            max_values=1,
-            options=options,
-        )
-
-    async def callback(self, interaction: discord.Interaction):
-        # Store the selected format in the view and continue the flow.
-        self.view.selected_format = self.values[0]
-
-        # Normal message path: open the standard modal to collect the message.
-        if self.view.selected_format == "normal":
-            await interaction.response.send_modal(
-                MessageModal(
-                    interaction.client,
-                    self.view.target_channel,
-                    self.view.selected_format,
-                )
-            )
-            audit_log(
-                f"{interaction.user.name} (ID: {interaction.user.id}) selected 'normal' for channel #{self.view.target_channel.name} (ID: {self.view.target_channel.id})."
-            )
-            return
-
-        # Embed path: first let the user choose an embed colour, then collect title and description.
-        try:
-            # Permissions check for embeds before proceeding
-            perms = self.view.target_channel.permissions_for(interaction.guild.me)
-            if not (perms.send_messages and perms.embed_links):
-                error = make_embed(
-                    "Error",
-                    f"I need send_messages and embed_links in {self.view.target_channel.mention}.",
-                    discord.Color.red(),
-                )
-                await interaction.response.send_message(embed=error, ephemeral=True)
-                audit_log(
-                    f"{interaction.user.name} (ID: {interaction.user.id}) attempted embed in #{self.view.target_channel.name} without sufficient permissions."
-                )
-                return
-
-            colour_view = ColourPickView(self.view.target_channel)
-            await interaction.response.send_message(
-                "Choose a colour for your embed:", view=colour_view, ephemeral=True
-            )
-            audit_log(
-                f"{interaction.user.name} (ID: {interaction.user.id}) selected 'embed' for channel #{self.view.target_channel.name} (ID: {self.view.target_channel.id})."
-            )
-        except Exception as e:
-            logging.warning(f"MessageFormatSelect callback error: {e}")
-            audit_log(f"Error processing message format selection: {e}")
-            error = make_embed(
-                "Error", f"Unexpected error:\n`{e}`", discord.Color.red()
-            )
-            # Try to respond, or fall back to followup if already responded
-            if not interaction.response.is_done():
-                await interaction.response.send_message(embed=error, ephemeral=True)
-            else:
-                await interaction.followup.send(embed=error, ephemeral=True)
+def collect_attachments(
+    attachments: Sequence[Optional[discord.Attachment]],
+) -> List[discord.Attachment]:
+    return [attachment for attachment in attachments if attachment is not None]
 
 
-class MessageFormatView(discord.ui.View):
-    def __init__(self, target_channel: discord.TextChannel):
-        super().__init__()
-        self.target_channel = target_channel
-        self.selected_format = "normal"
-        self.add_item(MessageFormatSelect())
+async def attachments_to_files(
+    attachments: Sequence[discord.Attachment],
+) -> List[discord.File]:
+    if not attachments:
+        return []
+    return list(await asyncio.gather(*(attachment.to_file() for attachment in attachments)))
+
+
+def first_image_attachment(
+    attachments: Sequence[discord.Attachment],
+) -> Optional[discord.Attachment]:
+    for attachment in attachments:
+        if attachment.content_type and attachment.content_type.startswith("image/"):
+            return attachment
+    return None
 
 
 # --- Modal for normal message input ---
@@ -111,12 +51,12 @@ class MessageModal(discord.ui.Modal, title="Send a Custom Message"):
         self,
         bot: commands.Bot,
         target_channel: discord.TextChannel,
-        selected_format: str,
+        attachments: Sequence[discord.Attachment],
     ):
         super().__init__()
         self.bot = bot
         self.target_channel = target_channel
-        self.selected_format = selected_format
+        self.attachments = list(attachments)
 
         # For normal messages, only add the message input.
         self.message_input = discord.ui.TextInput(
@@ -162,9 +102,11 @@ class MessageModal(discord.ui.Modal, title="Send a Custom Message"):
 
         # Attempt to send the custom message.
         try:
+            files = await attachments_to_files(self.attachments)
             await self.target_channel.send(
                 message_value,
                 allowed_mentions=allowed,
+                files=files or None,
             )
             audit_log(
                 f"{interaction.user.name} (ID: {interaction.user.id}) sent custom normal message in channel #{self.target_channel.name} (ID: {self.target_channel.id})."
@@ -374,7 +316,9 @@ class ColourSelect(discord.ui.Select):
         try:
             if choice == "custom_hex":
                 await interaction.response.send_modal(
-                    HexContentModal(self.parent_view.channel)
+                    HexContentModal(
+                        self.parent_view.channel, self.parent_view.attachments
+                    )
                 )
             else:
                 # Support for 'random' which is a valid discord.Color method
@@ -382,7 +326,9 @@ class ColourSelect(discord.ui.Select):
                 self.parent_view.chosen_colour = colour_method()
                 await interaction.response.send_modal(
                     ContentModal(
-                        self.parent_view.channel, self.parent_view.chosen_colour
+                        self.parent_view.channel,
+                        self.parent_view.chosen_colour,
+                        self.parent_view.attachments,
                     )
                 )
             audit_log(
@@ -394,14 +340,23 @@ class ColourSelect(discord.ui.Select):
             # Fallback to default colour
             self.parent_view.chosen_colour = discord.Color.default()
             await interaction.response.send_modal(
-                ContentModal(self.parent_view.channel, discord.Color.default())
+                ContentModal(
+                    self.parent_view.channel,
+                    discord.Color.default(),
+                    self.parent_view.attachments,
+                )
             )
 
 
 class ColourPickView(discord.ui.View):
-    def __init__(self, channel: discord.TextChannel):
+    def __init__(
+        self,
+        channel: discord.TextChannel,
+        attachments: Sequence[discord.Attachment],
+    ):
         super().__init__(timeout=60)
         self.channel = channel
+        self.attachments = list(attachments)
         self.chosen_colour = discord.Color.default()
         self.add_item(ColourSelect(self))
 
@@ -426,10 +381,16 @@ class ContentModal(discord.ui.Modal, title="Write your embed"):
         placeholder="Your message…",
     )
 
-    def __init__(self, channel: discord.TextChannel, colour: discord.Color):
+    def __init__(
+        self,
+        channel: discord.TextChannel,
+        colour: discord.Color,
+        attachments: Sequence[discord.Attachment],
+    ):
         super().__init__()
         self.channel = channel
         self.colour = colour
+        self.attachments = list(attachments)
 
     async def on_submit(self, interaction: discord.Interaction):
         # Mentions allowed: users and roles
@@ -455,7 +416,13 @@ class ContentModal(discord.ui.Modal, title="Write your embed"):
             color=self.colour,
         )
         try:
-            await self.channel.send(embed=embed, allowed_mentions=allowed)
+            files = await attachments_to_files(self.attachments)
+            image_attachment = first_image_attachment(self.attachments)
+            if image_attachment:
+                embed.set_image(url=f"attachment://{image_attachment.filename}")
+            await self.channel.send(
+                embed=embed, allowed_mentions=allowed, files=files or None
+            )
             audit_log(
                 f"{interaction.user} sent embed '{self.embed_title.value}' in #{self.channel.name} with colour {self.colour}."
             )
@@ -502,9 +469,12 @@ class HexContentModal(discord.ui.Modal, title="Custom HEX Embed"):
         placeholder="Your message…",
     )
 
-    def __init__(self, channel: discord.TextChannel):
+    def __init__(
+        self, channel: discord.TextChannel, attachments: Sequence[discord.Attachment]
+    ):
         super().__init__()
         self.channel = channel
+        self.attachments = list(attachments)
 
     async def on_submit(self, interaction: discord.Interaction):
         # Mentions allowed: users and roles
@@ -544,7 +514,13 @@ class HexContentModal(discord.ui.Modal, title="Custom HEX Embed"):
             color=colour,
         )
         try:
-            await self.channel.send(embed=embed, allowed_mentions=allowed)
+            files = await attachments_to_files(self.attachments)
+            image_attachment = first_image_attachment(self.attachments)
+            if image_attachment:
+                embed.set_image(url=f"attachment://{image_attachment.filename}")
+            await self.channel.send(
+                embed=embed, allowed_mentions=allowed, files=files or None
+            )
             audit_log(
                 f"{interaction.user} sent custom embed '{self.embed_title.value}' in #{self.channel.name}."
             )
@@ -577,13 +553,26 @@ class Message(commands.Cog):
 
     @app_commands.command(
         name="message",
-        description="Sends a custom message in a specified channel. Choose normal text or a coloured embed.",
+        description="Sends a custom text message in a specified channel.",
     )
-    @app_commands.describe(channel="The channel in which to send the custom message.")
+    @app_commands.describe(
+        channel="The channel in which to send the custom message.",
+        attachment1="Optional image or attachment to include.",
+        attachment2="Optional image or attachment to include.",
+        attachment3="Optional image or attachment to include.",
+    )
     async def message_command(
-        self, interaction: discord.Interaction, channel: discord.TextChannel
+        self,
+        interaction: discord.Interaction,
+        channel: discord.TextChannel,
+        attachment1: Optional[discord.Attachment] = None,
+        attachment2: Optional[discord.Attachment] = None,
+        attachment3: Optional[discord.Attachment] = None,
     ):
         try:
+            attachments = collect_attachments(
+                (attachment1, attachment2, attachment3)
+            )
             # Basic permission check for ability to send messages at all
             perms = channel.permissions_for(interaction.guild.me)
             if not perms.send_messages:
@@ -598,9 +587,12 @@ class Message(commands.Cog):
                 )
                 return
 
-            view = MessageFormatView(channel)
-            await interaction.response.send_message(
-                "Choose the message format:", view=view, ephemeral=True
+            await interaction.response.send_modal(
+                MessageModal(
+                    interaction.client,
+                    channel,
+                    attachments,
+                )
             )
             audit_log(
                 f"{interaction.user.name} (ID: {interaction.user.id}) invoked message command for channel #{channel.name} (ID: {channel.id})."
